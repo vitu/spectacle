@@ -1,14 +1,15 @@
 #import <Cocoa/Cocoa.h>
 
-#import "SpectacleWindowPositionManager.h"
+#import "SpectacleWindowAction.h"
 
 @class SpectacleAccessibilityElement;
+@class SpectacleScreenDetectionResult;
 
 @interface SpectacleScreenDetector : NSObject
 
-- (NSScreen *)screenWithAction:(SpectacleWindowAction)action
-        frontmostWindowElement:(SpectacleAccessibilityElement *)frontmostWindowElement
-                       screens:(NSArray *)screens
-                    mainScreen:(NSScreen *)mainScreen;
+- (SpectacleScreenDetectionResult *)screenWithAction:(SpectacleWindowAction *)action
+                              frontmostWindowElement:(SpectacleAccessibilityElement *)frontmostWindowElement
+                                             screens:(NSArray<NSScreen *> *)screens
+                                          mainScreen:(NSScreen *)mainScreen;
 
 @end

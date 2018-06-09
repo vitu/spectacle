@@ -1,39 +1,30 @@
 #import <Foundation/Foundation.h>
 
-#import "SpectacleShortcutStorageProtocol.h"
+#import "SpectacleMacros.h"
 
 @class SpectacleShortcut;
 
+@protocol SpectacleShortcutStorage;
+
 @interface SpectacleShortcutManager : NSObject
 
-- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)initWithShortcutStorage:(id<SpectacleShortcutStorage>)shortcutStorage NS_DESIGNATED_INITIALIZER;
 
-- (instancetype)initWithShortcutStorage:(id<SpectacleShortcutStorageProtocol>)shortcutStorage NS_DESIGNATED_INITIALIZER;
+SPECTACLE_INIT_AND_NEW_UNAVAILABLE
 
-#pragma mark -
+- (void)manageShortcuts:(NSArray<SpectacleShortcut *> *)shortcuts;
 
-- (void)registerShortcut:(SpectacleShortcut *)shortcut;
+- (void)updateShortcut:(SpectacleShortcut *)shortcut;
+- (void)updateShortcuts:(NSArray<SpectacleShortcut *> *)shortcuts;
 
-- (void)unregisterShortcutForName:(NSString *)name;
+- (void)clearShortcut:(SpectacleShortcut *)shortcut;
 
-- (void)registerShortcuts:(NSArray *)shortcuts;
+- (NSArray<SpectacleShortcut *> *)shortcuts;
+- (SpectacleShortcut *)shortcutForShortcutName:(NSString *)shortcutName;
 
+- (BOOL)doesShortcutExist:(SpectacleShortcut *)shortcut;
+
+- (void)registerShortcuts;
 - (void)unregisterShortcuts;
-
-#pragma mark -
-
-- (NSArray *)registeredShortcuts;
-
-- (SpectacleShortcut *)registeredShortcutForName:(NSString *)name;
-
-#pragma mark -
-
-- (BOOL)isShortcutRegistered:(SpectacleShortcut *)shortcut;
-
-#pragma mark -
-
-- (void)enableShortcuts;
-
-- (void)disableShortcuts;
 
 @end

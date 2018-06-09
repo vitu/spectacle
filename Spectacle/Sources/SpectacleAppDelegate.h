@@ -2,94 +2,53 @@
 
 @class SpectaclePreferencesController;
 
-@interface SpectacleAppDelegate : NSObject<NSApplicationDelegate, NSMenuDelegate>
+@interface SpectacleAppDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
 
-@property (nonatomic) IBOutlet NSMenu *statusItemMenu;
-@property (nonatomic) IBOutlet NSWindow *accessiblityAccessDialogWindow;
-@property (nonatomic) IBOutlet NSMenuItem *moveToCenterShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToFullscreenShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToLeftShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToRightShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToTopShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToBottomShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToUpperLeftShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToLowerLeftShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToUpperRightShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToLowerRightShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToNextDisplayShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToPreviousDisplayShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToNextThirdShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *moveToPreviousThirdShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *makeLargerShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *makeSmallerShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *undoLastMoveShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *redoLastMoveShortcutMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *disableShortcutsForAnHourMenuItem;
-@property (nonatomic) IBOutlet NSMenuItem *disableShortcutsForApplicationMenuItem;
-
-# pragma mark -
+@property (nonatomic, strong) IBOutlet NSMenu *statusItemMenu;
+@property (nonatomic, strong) IBOutlet NSWindow *accessiblityAccessDialogWindow;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToCenterShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToFullscreenShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToLeftShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToRightShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToTopShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToBottomShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToUpperLeftShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToLowerLeftShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToUpperRightShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToLowerRightShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToNextDisplayShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToPreviousDisplayShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToNextThirdShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *moveToPreviousThirdShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *makeLargerShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *makeSmallerShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *undoLastMoveShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *redoLastMoveShortcutMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *disableShortcutsForAnHourMenuItem;
+@property (nonatomic, strong) IBOutlet NSMenuItem *disableShortcutsForApplicationMenuItem;
 
 - (IBAction)showPreferencesWindow:(id)sender;
 
-# pragma mark -
-
 - (IBAction)moveFrontmostWindowToFullscreen:(id)sender;
-
 - (IBAction)moveFrontmostWindowToCenter:(id)sender;
-
-#pragma mark -
-
 - (IBAction)moveFrontmostWindowToLeftHalf:(id)sender;
-
 - (IBAction)moveFrontmostWindowToRightHalf:(id)sender;
-
 - (IBAction)moveFrontmostWindowToTopHalf:(id)sender;
-
 - (IBAction)moveFrontmostWindowToBottomHalf:(id)sender;
-
-#pragma mark -
-
 - (IBAction)moveFrontmostWindowToUpperLeft:(id)sender;
-
 - (IBAction)moveFrontmostWindowToLowerLeft:(id)sender;
-
-#pragma mark -
-
 - (IBAction)moveFrontmostWindowToUpperRight:(id)sender;
-
 - (IBAction)moveFrontmostWindowToLowerRight:(id)sender;
-
-#pragma mark -
-
 - (IBAction)moveFrontmostWindowToNextDisplay:(id)sender;
-
 - (IBAction)moveFrontmostWindowToPreviousDisplay:(id)sender;
-
-#pragma mark -
-
 - (IBAction)moveFrontmostWindowToNextThird:(id)sender;
-
 - (IBAction)moveFrontmostWindowToPreviousThird:(id)sender;
-
-#pragma mark -
-
 - (IBAction)makeFrontmostWindowLarger:(id)sender;
-
 - (IBAction)makeFrontmostWindowSmaller:(id)sender;
-
-#pragma mark -
-
 - (IBAction)undoLastWindowAction:(id)sender;
-
 - (IBAction)redoLastWindowAction:(id)sender;
-
-#pragma mark -
-
 - (IBAction)disableOrEnableShortcutsForAnHour:(id)sender;
-
 - (IBAction)disableOrEnableShortcutsForApplication:(id)sender;
-
-# pragma mark -
 
 - (IBAction)openSystemPreferences:(id)sender;
 

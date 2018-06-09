@@ -1,16 +1,10 @@
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 
-@class SpectacleShortcut, SpectacleShortcutManager;
+@class SpectacleShortcut;
+@class SpectacleShortcutManager;
 
-@interface SpectacleShortcutValidator : NSObject
+@protocol SpectacleShortcutValidator <NSObject>
 
-+ (BOOL)isShortcutValid:(SpectacleShortcut *)shortcut
-        shortcutManager:(SpectacleShortcutManager *)shortcutManager
-                  error:(NSError **)error;
-
-+ (BOOL)isShortcutValid:(SpectacleShortcut *)shortcut
-        shortcutManager:(SpectacleShortcutManager *)shortcutManager
-         withValidators:(NSArray *)validators
-                  error:(NSError **)error;
+- (BOOL)isShortcutValid:(SpectacleShortcut *)shortcut shortcutManager:(SpectacleShortcutManager *)shortcutManager;
 
 @end

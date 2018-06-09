@@ -1,53 +1,51 @@
-#import <Carbon/Carbon.h>
+#import <Foundation/Foundation.h>
 
-#import <Cocoa/Cocoa.h>
+#import "SpectacleMacros.h"
+#import "SpectacleWindowAction.h"
 
 @class SpectacleShortcut;
 
 typedef void(^SpectacleShortcutAction)(SpectacleShortcut *);
 
-@interface SpectacleShortcut : NSObject<NSCoding>
+@interface SpectacleShortcut : NSObject <NSCoding>
 
-@property (nonatomic) EventHotKeyID shortcutID;
-@property (nonatomic) NSString *shortcutName;
-@property (nonatomic, copy) SpectacleShortcutAction shortcutAction;
-@property (nonatomic) NSInteger shortcutCode;
-@property (nonatomic) NSUInteger shortcutModifiers;
-@property (nonatomic) EventHotKeyRef ref;
+@property (nonatomic, readonly, copy) NSString *shortcutName;
+@property (nonatomic, readonly, assign) NSInteger shortcutKeyCode;
+@property (nonatomic, readonly, assign) NSUInteger shortcutModifiers;
+@property (nonatomic, readonly, strong) SpectacleShortcutAction shortcutAction;
+@property (nonatomic, readonly, copy) NSString *shortcutKeyBinding;
+@property (nonatomic, readonly, strong) SpectacleWindowAction *windowAction;
 
-#pragma mark -
+- (instancetype)initWithShortcutName:(NSString *)shortcutName shortcutKeyBinding:(NSString *)shortcutKeyBinding;
 
-- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)initWithShortcutName:(NSString *)shortcutName
+                  shortcutKeyBinding:(NSString *)shortcutKeyBinding
+                      shortcutAction:(SpectacleShortcutAction)shortcutAction;
 
-- (instancetype)initWithShortcutCode:(NSInteger)shortcutCode
-                   shortcutModifiers:(NSUInteger)shortcutModifiers NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithShortcutName:(NSString *)shortcutName
+                     shortcutKeyCode:(NSInteger)shortcutKeyCode
+                   shortcutModifiers:(NSUInteger)shortcutModifiers;
 
-#pragma mark -
+- (instancetype)initWithShortcutName:(NSString *)shortcutName
+                     shortcutKeyCode:(NSInteger)shortcutKeyCode
+                   shortcutModifiers:(NSUInteger)shortcutModifiers
+                      shortcutAction:(SpectacleShortcutAction)shortcutAction NS_DESIGNATED_INITIALIZER;
 
-+ (SpectacleShortcut *)clearedShortcut;
+SPECTACLE_INIT_AND_NEW_UNAVAILABLE
 
-+ (SpectacleShortcut *)clearedShortcutWithName:(NSString *)name;
-
-#pragma mark -
+- (instancetype)copyWithShortcutAction:(SpectacleShortcutAction)shortcutAction;
 
 - (void)triggerShortcutAction;
 
-#pragma mark -
-
 - (BOOL)isClearedShortcut;
-
-#pragma mark -
 
 - (NSString *)displayString;
 
-#pragma mark -
+- (BOOL)isEqual:(id)object;
+- (BOOL)isEqualToShortcut:(SpectacleShortcut *)shortcut;
+
+- (BOOL)containsModifiers:(NSUInteger)modifiers;
 
 + (BOOL)validCocoaModifiers:(NSUInteger)modifiers;
-
-#pragma mark -
-
-- (BOOL)isEqual:(id)object;
-
-- (BOOL)isEqualToShortcut:(SpectacleShortcut *)shortcut;
 
 @end

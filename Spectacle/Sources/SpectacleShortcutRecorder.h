@@ -1,32 +1,15 @@
-#import <Carbon/Carbon.h>
-
 #import <Cocoa/Cocoa.h>
 
-#import "SpectacleShortcutRecorderDelegate.h"
+@class SpectacleShortcut;
+@class SpectacleShortcutValidation;
 
-@class SpectacleShortcutManager;
+@protocol SpectacleShortcutRecorderDelegate;
 
-@interface SpectacleShortcutRecorder : NSControl
+@interface SpectacleShortcutRecorder : NSView
 
-- (NSString *)shortcutName;
-
-- (void)setShortcutName:(NSString *)shortcutName;
-
-#pragma mark -
-
-- (SpectacleShortcut *)shortcut;
-
-- (void)setShortcut:(SpectacleShortcut *)shortcut;
-
-#pragma mark -
-
-- (id<SpectacleShortcutRecorderDelegate>)delegate;
-
-- (void)setDelegate:(id<SpectacleShortcutRecorderDelegate>)delegate;
-
-#pragma mark -
-
-- (void)setAdditionalShortcutValidators:(NSArray *)additionalShortcutValidators
-                        shortcutManager:(SpectacleShortcutManager *)shortcutManager;
+@property (nonatomic, copy) NSString *shortcutName;
+@property (nonatomic, strong) SpectacleShortcut *shortcut;
+@property (nonatomic, strong) SpectacleShortcutValidation *shortcutValidation;
+@property (nonatomic, weak) id<SpectacleShortcutRecorderDelegate> delegate;
 
 @end

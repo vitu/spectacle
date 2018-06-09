@@ -1,17 +1,17 @@
-#import "SpectacleAccessibilityElement.h"
 #import "SpectacleStandardWindowMover.h"
+
+#import "SpectacleAccessibilityElement.h"
 
 @implementation SpectacleStandardWindowMover
 {
-  id<SpectacleWindowMoverProtocol> _innerWindowMover;
+  id<SpectacleWindowMover> _innerWindowMover;
 }
 
-- (instancetype)initWithInnerWindowMover:(id<SpectacleWindowMoverProtocol>)innerWindowMover
+- (instancetype)initWithInnerWindowMover:(id<SpectacleWindowMover>)innerWindowMover
 {
   if (self = [super init]) {
     _innerWindowMover = innerWindowMover;
   }
-
   return self;
 }
 
@@ -20,38 +20,27 @@
   return [self initWithInnerWindowMover:nil];
 }
 
-+ (instancetype)newWithInnerWindowMover:(id<SpectacleWindowMoverProtocol>)innerWindowMover
++ (instancetype)newWithInnerWindowMover:(id<SpectacleWindowMover>)innerWindowMover
 {
   return [[self alloc] initWithInnerWindowMover:innerWindowMover];
 }
-
-#pragma mark -
 
 - (void)moveWindowRect:(CGRect)windowRect
          frameOfScreen:(CGRect)frameOfScreen
   visibleFrameOfScreen:(CGRect)visibleFrameOfScreen
 frontmostWindowElement:(SpectacleAccessibilityElement *)frontmostWindowElement
-                action:(SpectacleWindowAction)action
+                action:(SpectacleWindowAction *)action
 {
-  CGRect previousWindowRect = [frontmostWindowElement rectOfElementWithFrameOfScreen:frameOfScreen];
-
+  CGRect previousWindowRect = [frontmostWindowElement rectOfElement];
   if (CGRectIsNull(previousWindowRect)) {
     return;
   }
-
-  [frontmostWindowElement setRectOfElement:windowRect frameOfScreen:frameOfScreen];
-
+  [frontmostWindowElement setRectOfElement:windowRect];
   [_innerWindowMover moveWindowRect:windowRect
                       frameOfScreen:frameOfScreen
                visibleFrameOfScreen:visibleFrameOfScreen
              frontmostWindowElement:frontmostWindowElement
                              action:action];
-
-  CGRect movedWindowRect = [frontmostWindowElement rectOfElementWithFrameOfScreen:frameOfScreen];
-
-  if (MovingToThirdOfDisplay(action) && !CGRectContainsRect(windowRect, movedWindowRect)) {
-    [frontmostWindowElement setRectOfElement:previousWindowRect frameOfScreen:frameOfScreen];
-  }
 }
 
 @end

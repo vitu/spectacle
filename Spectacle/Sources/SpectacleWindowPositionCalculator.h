@@ -1,18 +1,19 @@
 #import <Foundation/Foundation.h>
 
-#import "SpectacleWindowPositionManager.h"
+#import "SpectacleMacros.h"
+#import "SpectacleWindowAction.h"
 
-@class SpectacleCalculationResult;
+@class SpectacleWindowPositionCalculationResult;
 
 @interface SpectacleWindowPositionCalculator : NSObject
 
-- (SpectacleCalculationResult *)calculateWindowRect:(CGRect)windowRect
-                               visibleFrameOfScreen:(CGRect)visibleFrameOfScreen
-                                             action:(SpectacleWindowAction)action;
+- (instancetype)initWithErrorHandler:(void(^)(NSString *message))errorHandler NS_DESIGNATED_INITIALIZER;
 
-- (SpectacleCalculationResult *)calculateResizedWindowRect:(CGRect)windowRect
-                                      visibleFrameOfScreen:(CGRect)visibleFrameOfScreen
-                                                sizeOffset:(CGFloat)sizeOffset
-                                                    action:(SpectacleWindowAction)action;
+- (SpectacleWindowPositionCalculationResult *)calculateWindowRect:(CGRect)windowRect
+                                       visibleFrameOfSourceScreen:(CGRect)visibleFrameOfSourceScreen
+                                  visibleFrameOfDestinationScreen:(CGRect)visibleFrameOfDestinationScreen
+                                                           action:(SpectacleWindowAction *)action;
+
+SPECTACLE_INIT_AND_NEW_UNAVAILABLE
 
 @end

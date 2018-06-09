@@ -1,12 +1,15 @@
+#import "SpectacleAppDelegate.h"
+
 #import <Sparkle/Sparkle.h>
 
 #import "SpectacleAccessibilityElement.h"
-#import "SpectacleAppDelegate.h"
-#import "SpectacleConstants.h"
+#import "SpectacleDefaultShortcutHelpers.h"
+#import "SpectacleMigratingShortcutStorage.h"
 #import "SpectaclePreferencesController.h"
 #import "SpectacleScreenDetector.h"
+#import "SpectacleShortcutJSONStorage.h"
 #import "SpectacleShortcutManager.h"
-#import "SpectacleShortcutTranslator.h"
+#import "SpectacleShortcutTranslations.h"
 #import "SpectacleShortcutUserDefaultsStorage.h"
 #import "SpectacleUtilities.h"
 #import "SpectacleWindowPositionCalculator.h"
@@ -14,119 +17,108 @@
 
 @implementation SpectacleAppDelegate
 {
-  NSDictionary *_shortcutMenuItems;
+  NSDictionary<NSString *, NSMenuItem *> *_shortcutMenuItems;
   NSStatusItem *_statusItem;
-  id<SpectacleShortcutStorageProtocol> _shortcutStorage;
+  id<SpectacleShortcutStorage> _shortcutStorage;
   SpectacleShortcutManager *_shortcutManager;
   SpectacleWindowPositionManager *_windowPositionManager;
   SpectaclePreferencesController *_preferencesController;
   NSTimer *_disableShortcutsForAnHourTimer;
-  NSSet *_blacklistedApplications;
-  NSMutableSet *_disabledApplications;
+  NSSet<NSString *> *_blacklistedApplications;
+  NSMutableSet<NSString *> *_disabledApplications;
   BOOL _shortcutsAreDisabledForAnHour;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
   NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-
+  NSNotificationCenter *workspaceNotificationCenter = [NSWorkspace sharedWorkspace].notificationCenter;
   [notificationCenter addObserver:self
                          selector:@selector(enableStatusItem)
-                             name:kStatusItemEnabledNotification
+                             name:@"SpectacleStatusItemEnabledNotification"
                            object:nil];
-
   [notificationCenter addObserver:self
                          selector:@selector(disableStatusItem)
-                             name:kStatusItemDisabledNotification
+                             name:@"SpectacleStatusItemDisabledNotification"
                            object:nil];
-
   [notificationCenter addObserver:self
                          selector:@selector(updateShortcutMenuItems)
-                             name:kShortcutChangedNotification
+                             name:@"SpectacleShortcutChangedNotification"
                            object:nil];
-
   [notificationCenter addObserver:self
                          selector:@selector(updateShortcutMenuItems)
-                             name:kRestoreDefaultShortcutsNotification
+                             name:@"SpectacleRestoreDefaultShortcutsNotification"
                            object:nil];
-
   [notificationCenter addObserver:self
                          selector:@selector(menuDidSendAction:)
                              name:NSMenuDidSendActionNotification
                            object:nil];
-
-  NSNotificationCenter *workspaceNotificationCenter = [NSWorkspace sharedWorkspace].notificationCenter;
-
+  [notificationCenter addObserver:self
+                         selector:@selector(inputSourceSelectionDidChange)
+                             name:NSTextInputContextKeyboardSelectionDidChangeNotification
+                           object:nil];
   [workspaceNotificationCenter addObserver:self
                                   selector:@selector(applicationDidActivate:)
                                       name:NSWorkspaceDidActivateApplicationNotification
                                     object:nil];
-
   [workspaceNotificationCenter addObserver:self
                                   selector:@selector(applicationDidDeactivate:)
                                       name:NSWorkspaceDidDeactivateApplicationNotification
                                     object:nil];
-
   [SpectacleUtilities registerDefaultsForBundle:[NSBundle mainBundle]];
-
-  _shortcutMenuItems = @{kWindowActionMoveToCenter: _moveToCenterShortcutMenuItem,
-                         kWindowActionMoveToFullscreen: _moveToFullscreenShortcutMenuItem,
-                         kWindowActionMoveToLeftHalf: _moveToLeftShortcutMenuItem,
-                         kWindowActionMoveToRightHalf: _moveToRightShortcutMenuItem,
-                         kWindowActionMoveToTopHalf: _moveToTopShortcutMenuItem,
-                         kWindowActionMoveToBottomHalf: _moveToBottomShortcutMenuItem,
-                         kWindowActionMoveToUpperLeft: _moveToUpperLeftShortcutMenuItem,
-                         kWindowActionMoveToLowerLeft: _moveToLowerLeftShortcutMenuItem,
-                         kWindowActionMoveToUpperRight: _moveToUpperRightShortcutMenuItem,
-                         kWindowActionMoveToLowerRight: _moveToLowerRightShortcutMenuItem,
-                         kWindowActionMoveToNextDisplay: _moveToNextDisplayShortcutMenuItem,
-                         kWindowActionMoveToPreviousDisplay: _moveToPreviousDisplayShortcutMenuItem,
-                         kWindowActionMoveToNextThird: _moveToNextThirdShortcutMenuItem,
-                         kWindowActionMoveToPreviousThird: _moveToPreviousThirdShortcutMenuItem,
-                         kWindowActionMakeLarger: _makeLargerShortcutMenuItem,
-                         kWindowActionMakeSmaller: _makeSmallerShortcutMenuItem,
-                         kWindowActionUndoLastMove: _undoLastMoveShortcutMenuItem,
-                         kWindowActionRedoLastMove: _redoLastMoveShortcutMenuItem};
-
+  _shortcutMenuItems = @{
+                         @"MoveToCenter": _moveToCenterShortcutMenuItem,
+                         @"MoveToFullscreen": _moveToFullscreenShortcutMenuItem,
+                         @"MoveToLeftHalf": _moveToLeftShortcutMenuItem,
+                         @"MoveToRightHalf": _moveToRightShortcutMenuItem,
+                         @"MoveToTopHalf": _moveToTopShortcutMenuItem,
+                         @"MoveToBottomHalf": _moveToBottomShortcutMenuItem,
+                         @"MoveToUpperLeft": _moveToUpperLeftShortcutMenuItem,
+                         @"MoveToLowerLeft": _moveToLowerLeftShortcutMenuItem,
+                         @"MoveToUpperRight": _moveToUpperRightShortcutMenuItem,
+                         @"MoveToLowerRight": _moveToLowerRightShortcutMenuItem,
+                         @"MoveToNextDisplay": _moveToNextDisplayShortcutMenuItem,
+                         @"MoveToPreviousDisplay": _moveToPreviousDisplayShortcutMenuItem,
+                         @"MoveToNextThird": _moveToNextThirdShortcutMenuItem,
+                         @"MoveToPreviousThird": _moveToPreviousThirdShortcutMenuItem,
+                         @"MakeLarger": _makeLargerShortcutMenuItem,
+                         @"MakeSmaller": _makeSmallerShortcutMenuItem,
+                         @"UndoLastMove": _undoLastMoveShortcutMenuItem,
+                         @"RedoLastMove": _redoLastMoveShortcutMenuItem,
+                         };
   NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-
-  _blacklistedApplications = [NSSet setWithArray:[userDefaults objectForKey:kBlacklistedApplicationsPreference]];
-  _disabledApplications = [NSMutableSet setWithArray:[userDefaults objectForKey:kDisabledApplicationsPreference]];
-
-  _shortcutStorage = [SpectacleShortcutUserDefaultsStorage new];
+  _blacklistedApplications = [NSSet setWithArray:[userDefaults objectForKey:@"BlacklistedApplications"]];
+  _disabledApplications = [NSMutableSet setWithArray:[userDefaults objectForKey:@"DisabledApplications"]];
+  _shortcutStorage = [[SpectacleMigratingShortcutStorage alloc] initWithShortcutStorage:[SpectacleShortcutUserDefaultsStorage new]
+                                                                   migrationDestination:[SpectacleShortcutJSONStorage new]];
   _shortcutManager = [[SpectacleShortcutManager alloc] initWithShortcutStorage:_shortcutStorage];
-
+  SpectacleWindowPositionCalculator *windowPositionCalculator = [[SpectacleWindowPositionCalculator alloc] initWithErrorHandler:^(NSString *errorMessage) {
+    NSAlert *alert = [NSAlert new];
+    alert.alertStyle = NSWarningAlertStyle;
+    alert.messageText = @"Encountered an unexpected error";
+    alert.informativeText = errorMessage;
+    [alert runModal];
+  }];
   _windowPositionManager = [[SpectacleWindowPositionManager alloc] initWithScreenDetector:[SpectacleScreenDetector new]
-                                                                 windowPositionCalculator:[SpectacleWindowPositionCalculator new]
+                                                                 windowPositionCalculator:windowPositionCalculator
                                                                           sharedWorkspace:[NSWorkspace sharedWorkspace]];
-
   _preferencesController = [[SpectaclePreferencesController alloc] initWithShortcutManager:_shortcutManager
                                                                      windowPositionManager:_windowPositionManager
                                                                            shortcutStorage:_shortcutStorage];
-
   _shortcutsAreDisabledForAnHour = NO;
-
-  [self registerShortcuts];
-
+  [self manageShortcuts];
   [self disableShortcutsIfFrontmostApplicationIsBlacklistedOrDisabled];
-
-  BOOL automaticallyChecksForUpdates = [userDefaults boolForKey:kAutomaticUpdateCheckEnabledPreference];
-  BOOL statusItemEnabled = [userDefaults boolForKey:kStatusItemEnabledPreference];
-
+  BOOL automaticallyChecksForUpdates = [userDefaults boolForKey:@"AutomaticUpdateCheckEnabled"];
+  BOOL statusItemEnabled = [userDefaults boolForKey:@"StatusItemEnabled"];
   if (statusItemEnabled) {
     [self enableStatusItem];
   }
-
   [[SUUpdater sharedUpdater] setAutomaticallyChecksForUpdates:automaticallyChecksForUpdates];
-
   [self updateShortcutMenuItems];
-
   if (!AXIsProcessTrustedWithOptions(NULL)) {
     [[NSApplication sharedApplication] runModalForWindow:self.accessiblityAccessDialogWindow];
   }
 }
-
-#pragma mark -
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)application hasVisibleWindows:(BOOL)visibleWindows
 {
@@ -135,121 +127,106 @@
   return YES;
 }
 
-#pragma mark -
-
 - (IBAction)showPreferencesWindow:(id)sender
 {
   [_preferencesController showWindow:sender];
 }
 
-#pragma mark -
-
 - (IBAction)moveFrontmostWindowToFullscreen:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionFullscreen];
+                                              action:kSpectacleWindowActionFullscreen];
 }
 
 - (IBAction)moveFrontmostWindowToCenter:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionCenter];
+                                              action:kSpectacleWindowActionCenter];
 }
-
-#pragma mark -
 
 - (IBAction)moveFrontmostWindowToLeftHalf:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionLeftHalf];
+                                              action:kSpectacleWindowActionLeftHalf];
 }
 
 - (IBAction)moveFrontmostWindowToRightHalf:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionRightHalf];
+                                              action:kSpectacleWindowActionRightHalf];
 }
 
 - (IBAction)moveFrontmostWindowToTopHalf:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionTopHalf];
+                                              action:kSpectacleWindowActionTopHalf];
 }
 
 - (IBAction)moveFrontmostWindowToBottomHalf:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionBottomHalf];
+                                              action:kSpectacleWindowActionBottomHalf];
 }
-
-#pragma mark -
 
 - (IBAction)moveFrontmostWindowToUpperLeft:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionUpperLeft];
+                                              action:kSpectacleWindowActionUpperLeft];
 }
 
 - (IBAction)moveFrontmostWindowToLowerLeft:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionLowerLeft];
+                                              action:kSpectacleWindowActionLowerLeft];
 }
-
-#pragma mark -
 
 - (IBAction)moveFrontmostWindowToUpperRight:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionUpperRight];
+                                              action:kSpectacleWindowActionUpperRight];
 }
 
 - (IBAction)moveFrontmostWindowToLowerRight:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionLowerRight];
+                                              action:kSpectacleWindowActionLowerRight];
 }
-
-#pragma mark -
 
 - (IBAction)moveFrontmostWindowToNextDisplay:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionNextDisplay];
+                                              action:kSpectacleWindowActionNextDisplay];
 }
 
 - (IBAction)moveFrontmostWindowToPreviousDisplay:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionPreviousDisplay];
+                                              action:kSpectacleWindowActionPreviousDisplay];
 }
-
-#pragma mark -
 
 - (IBAction)moveFrontmostWindowToNextThird:(id)sender
 {
   [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                              action:SpectacleWindowActionNextThird];
+                                              action:kSpectacleWindowActionNextThird];
 }
 
 - (IBAction)moveFrontmostWindowToPreviousThird:(id)sender
 {
-  [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement] action:SpectacleWindowActionPreviousThird];
+  [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
+                                              action:kSpectacleWindowActionPreviousThird];
 }
-
-#pragma mark -
 
 - (IBAction)makeFrontmostWindowLarger:(id)sender
 {
-  [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement] action:SpectacleWindowActionLarger];
+  [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
+                                              action:kSpectacleWindowActionLarger];
 }
 
 - (IBAction)makeFrontmostWindowSmaller:(id)sender
 {
-  [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement] action:SpectacleWindowActionSmaller];
+  [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
+                                              action:kSpectacleWindowActionSmaller];
 }
-
-#pragma mark -
 
 - (IBAction)undoLastWindowAction:(id)sender
 {
@@ -261,101 +238,78 @@
   [_windowPositionManager redoLastWindowAction];
 }
 
-#pragma mark -
-
 - (IBAction)disableOrEnableShortcutsForAnHour:(id)sender
 {
   NSInteger newMenuItemState = NSMixedState;
-
   if (_shortcutsAreDisabledForAnHour) {
     _shortcutsAreDisabledForAnHour = NO;
-
     [_disableShortcutsForAnHourTimer invalidate];
-
     [self enableShortcutsIfPermitted];
-
     newMenuItemState = NSOffState;
   } else {
     _shortcutsAreDisabledForAnHour = YES;
-
     _disableShortcutsForAnHourTimer = [NSTimer scheduledTimerWithTimeInterval:3600
                                                                        target:self
                                                                      selector:@selector(disableOrEnableShortcutsForAnHour:)
                                                                      userInfo:nil
                                                                       repeats:NO];
-
-    [_shortcutManager disableShortcuts];
-
+    [_shortcutManager unregisterShortcuts];
     newMenuItemState = NSOnState;
   }
-
   self.disableShortcutsForAnHourMenuItem.state = newMenuItemState;
 }
 
 - (IBAction)disableOrEnableShortcutsForApplication:(id)sender
 {
   NSRunningApplication *frontmostApplication = [NSWorkspace sharedWorkspace].frontmostApplication;
-
   if ([_disabledApplications containsObject:frontmostApplication.bundleIdentifier]) {
     [_disabledApplications removeObject:frontmostApplication.bundleIdentifier];
-
     [self enableShortcutsIfPermitted];
-
     self.disableShortcutsForApplicationMenuItem.state = NSOffState;
   } else {
     [_disabledApplications addObject:frontmostApplication.bundleIdentifier];
-
-    [_shortcutManager disableShortcuts];
-
+    [_shortcutManager unregisterShortcuts];
     self.disableShortcutsForApplicationMenuItem.state = NSOnState;
   }
-
-  [NSUserDefaults.standardUserDefaults setObject:_disabledApplications.allObjects
-                                          forKey:kDisabledApplicationsPreference];
+  [NSUserDefaults.standardUserDefaults setObject:_disabledApplications.allObjects forKey:@"DisabledApplications"];
 }
-
-#pragma mark -
 
 - (IBAction)openSystemPreferences:(id)sender
 {
-  NSURL *preferencePaneURL = [NSURL fileURLWithPath:[SpectacleUtilities pathForPreferencePaneNamed:kSecurityPreferencePaneName]];
+  NSURL *preferencePaneURL = [NSURL fileURLWithPath:[SpectacleUtilities pathForPreferencePaneNamed:@"Security"]];
   NSBundle *applicationBundle = NSBundle.mainBundle;
-  NSURL *scriptURL = [applicationBundle URLForResource:kSecurityAndPrivacyPreferencesScriptName
-                                         withExtension:kAppleScriptFileExtension];
-
+  NSURL *scriptURL = [applicationBundle URLForResource:@"Security & Privacy System Preferences" withExtension:@"scpt"];
   [[NSApplication sharedApplication] stopModal];
-
   [self.accessiblityAccessDialogWindow orderOut:self];
-
   if (![[[NSAppleScript alloc] initWithContentsOfURL:scriptURL error:nil] executeAndReturnError:nil]) {
     [[NSWorkspace sharedWorkspace] openURL:preferencePaneURL];
   }
 }
 
-#pragma mark -
-
-- (void)registerShortcuts
+- (void)dealloc
 {
-  NSArray *shortcuts = [_shortcutStorage loadShortcutsWithAction:^(SpectacleShortcut *shortcut) {
-    SpectacleWindowAction windowAction = [_windowPositionManager windowActionForShortcut:shortcut];
-
-    [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
-                                                action:windowAction];
-  }];
-
-  [_shortcutManager registerShortcuts:shortcuts];
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-#pragma mark -
+- (void)manageShortcuts
+{
+  SpectacleShortcutAction action = ^(SpectacleShortcut *shortcut) {
+    [_windowPositionManager moveFrontmostWindowElement:[SpectacleAccessibilityElement frontmostWindowElement]
+                                                action:shortcut.windowAction];
+  };
+  NSArray<SpectacleShortcut *> *shortcuts = [_shortcutStorage loadShortcutsWithAction:action];
+  if (shortcuts.count != 0) {
+    [_shortcutManager manageShortcuts:shortcuts];
+  } else {
+    [_shortcutManager manageShortcuts:SpectacleDefaultShortcutsWithAction(action)];
+  }
+}
 
 - (void)enableStatusItem
 {
   _statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
-
-  NSImage *statusImage = [NSBundle.mainBundle imageForResource:kStatusItemIcon];
-
+  NSImage *statusImage = [NSBundle.mainBundle imageForResource:@"Spectacle Status Item"];
   [statusImage setTemplate:YES];
-
   _statusItem.highlightMode = YES;
   _statusItem.image = statusImage;
   _statusItem.menu = _statusItemMenu;
@@ -367,19 +321,14 @@
   [NSStatusBar.systemStatusBar removeStatusItem:_statusItem];
 }
 
-#pragma mark -
-
 - (void)updateShortcutMenuItems
 {
-  SpectacleShortcutTranslator *shortcutTranslator = [SpectacleShortcutTranslator sharedTranslator];
-
   for (NSString *shortcutName in _shortcutMenuItems.allKeys) {
     NSMenuItem *shortcutMenuItem = _shortcutMenuItems[shortcutName];
-    SpectacleShortcut *shortcut = [_shortcutManager registeredShortcutForName:shortcutName];
-
+    SpectacleShortcut *shortcut = [_shortcutManager shortcutForShortcutName:shortcutName];
     if (shortcut) {
-      shortcutMenuItem.keyEquivalent = [[shortcutTranslator translateKeyCode:shortcut.shortcutCode] lowercaseString];
-      shortcutMenuItem.keyEquivalentModifierMask = [SpectacleShortcutTranslator convertModifiersToCocoaIfNecessary:shortcut.shortcutModifiers];
+      shortcutMenuItem.keyEquivalent = [SpectacleTranslateKeyCode(shortcut.shortcutKeyCode) lowercaseString];
+      shortcutMenuItem.keyEquivalentModifierMask = SpectacleConvertModifiersToCocoaIfNecessary(shortcut.shortcutModifiers);
     } else {
       shortcutMenuItem.keyEquivalent = @"";
       shortcutMenuItem.keyEquivalentModifierMask = 0;
@@ -387,74 +336,61 @@
   }
 }
 
-#pragma mark -
-
 - (void)enableShortcutsIfPermitted
 {
   NSRunningApplication *frontmostApplication = [NSWorkspace sharedWorkspace].frontmostApplication;
-
   // Do not enable shortcuts if they should remain disabled for an hour.
-  if (_shortcutsAreDisabledForAnHour) return;
-
+  if (_shortcutsAreDisabledForAnHour) {
+    return;
+  }
   // Do not enable shortcuts if the application is blacklisted or disabled.
   if ([_blacklistedApplications containsObject:frontmostApplication.bundleIdentifier]
       || [_disabledApplications containsObject:frontmostApplication.bundleIdentifier]) {
     return;
   }
-
-  [_shortcutManager enableShortcuts];
+  [_shortcutManager registerShortcuts];
+  [[NSNotificationCenter defaultCenter] postNotificationName:@"SpectacleShortcutChangedNotification" object:self];
 }
 
 - (void)disableShortcutsIfFrontmostApplicationIsBlacklistedOrDisabled
 {
   NSRunningApplication *frontmostApplication = [NSWorkspace sharedWorkspace].frontmostApplication;
-
   // Do not disable shortcuts if the application is not blacklisted or disabled.
   if (![_blacklistedApplications containsObject:frontmostApplication.bundleIdentifier]
       && ![_disabledApplications containsObject:frontmostApplication.bundleIdentifier]) {
     return;
   }
-
-  [_shortcutManager disableShortcuts];
+  [_shortcutManager unregisterShortcuts];
 }
-
-#pragma mark -
 
 - (void)applicationDidActivate:(NSNotification *)notification
 {
   NSRunningApplication *application = notification.userInfo[NSWorkspaceApplicationKey];
-
   if ([_blacklistedApplications containsObject:application.bundleIdentifier]
       || [_disabledApplications containsObject:application.bundleIdentifier]) {
-    [_shortcutManager disableShortcuts];
+    [_shortcutManager unregisterShortcuts];
   }
 }
 
 - (void)applicationDidDeactivate:(NSNotification *)notification
 {
   NSRunningApplication *application = notification.userInfo[NSWorkspaceApplicationKey];
-
   if ([_blacklistedApplications containsObject:application.bundleIdentifier]
       || [_disabledApplications containsObject:application.bundleIdentifier]) {
     [self enableShortcutsIfPermitted];
   }
 }
 
-#pragma mark -
-
 - (void)menuWillOpen:(NSMenu *)menu
 {
   NSRunningApplication *frontmostApplication = [NSWorkspace sharedWorkspace].frontmostApplication;
-
   self.disableShortcutsForApplicationMenuItem.hidden = NO;
-
   if ([_blacklistedApplications containsObject:frontmostApplication.bundleIdentifier]) {
     self.disableShortcutsForApplicationMenuItem.hidden = YES;
   } else {
     self.disableShortcutsForApplicationMenuItem.title =
       [NSString stringWithFormat:NSLocalizedString(@"MenuItemTitleDisableShortcutsForApplication", @"The menu item title that displays the application to disable shortcuts for"), frontmostApplication.localizedName];
   }
-
   if ([_disabledApplications containsObject:frontmostApplication.bundleIdentifier]) {
     self.disableShortcutsForApplicationMenuItem.state = NSOnState;
   } else {
@@ -465,10 +401,15 @@
 - (void)menuDidSendAction:(NSNotification *)notification
 {
   NSMenuItem *menuItem = notification.userInfo[@"MenuItem"];
-
-  if (menuItem.tag == kMenuItemActivateIgnoringOtherApps) {
+  if (menuItem.tag == -1) {
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
   }
+}
+
+- (void)inputSourceSelectionDidChange
+{
+  [_preferencesController loadRegisteredShortcuts];
+  [self updateShortcutMenuItems];
 }
 
 @end

@@ -1,117 +1,150 @@
 #import "SpectacleShortcut.h"
-#import "SpectacleShortcutTranslator.h"
+
+#import <Cocoa/Cocoa.h>
+
+#import "SpectacleShortcutKeyBindings.h"
+#import "SpectacleShortcutTranslations.h"
 
 @implementation SpectacleShortcut
 
-- (instancetype)initWithShortcutCode:(NSInteger)shortcutCode shortcutModifiers:(NSUInteger)shortcutModifiers
+- (instancetype)initWithShortcutName:(NSString *)shortcutName shortcutKeyBinding:(NSString *)shortcutKeyBinding
+{
+  return [self initWithShortcutName:shortcutName shortcutKeyBinding:shortcutKeyBinding shortcutAction:nil];
+}
+
+- (instancetype)initWithShortcutName:(NSString *)shortcutName
+                  shortcutKeyBinding:(NSString *)shortcutKeyBinding
+                      shortcutAction:(SpectacleShortcutAction)shortcutAction
+{
+  NSNumber *shortcutKeyCode = SpectacleConvertShortcutKeyBindingToKeyCode(shortcutKeyBinding);
+  return [self initWithShortcutName:shortcutName
+                    shortcutKeyCode:shortcutKeyCode ? [shortcutKeyCode integerValue] : -1
+                  shortcutModifiers:[SpectacleConvertShortcutKeyBindingToModifiers(shortcutKeyBinding) unsignedIntegerValue]
+                     shortcutAction:shortcutAction];
+}
+
+- (instancetype)initWithShortcutName:(NSString *)shortcutName
+                     shortcutKeyCode:(NSInteger)shortcutKeyCode
+                   shortcutModifiers:(NSUInteger)shortcutModifiers
+{
+  return [self initWithShortcutName:shortcutName
+                    shortcutKeyCode:shortcutKeyCode
+                  shortcutModifiers:shortcutModifiers
+                     shortcutAction:nil];
+}
+
+- (instancetype)initWithShortcutName:(NSString *)shortcutName
+                     shortcutKeyCode:(NSInteger)shortcutKeyCode
+                   shortcutModifiers:(NSUInteger)shortcutModifiers
+                      shortcutAction:(SpectacleShortcutAction)shortcutAction
 {
   if (self = [super init]) {
-    _shortcutCode = shortcutCode;
-    _shortcutModifiers = [SpectacleShortcutTranslator convertModifiersToCarbonIfNecessary:shortcutModifiers];
+    _shortcutName = shortcutName;
+    _shortcutKeyCode = shortcutKeyCode;
+    _shortcutModifiers = SpectacleConvertModifiersToCarbonIfNecessary(shortcutModifiers);
+    _shortcutAction = shortcutAction;
   }
-
   return self;
 }
 
-#pragma mark -
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wobjc-designated-initializers"
+- (instancetype)copyWithShortcutAction:(SpectacleShortcutAction)shortcutAction
+{
+  return [[SpectacleShortcut alloc] initWithShortcutName:_shortcutName
+                                         shortcutKeyCode:_shortcutKeyCode
+                                       shortcutModifiers:_shortcutModifiers
+                                          shortcutAction:shortcutAction];
+}
 
 - (instancetype)initWithCoder:(NSCoder *)coder
 {
-  if (self = [super init]) {
-    _shortcutName = [coder decodeObjectForKey:@"name"];
-    _shortcutCode = [coder decodeIntegerForKey:@"keyCode"];
-    _shortcutModifiers = [coder decodeIntegerForKey:@"modifiers"];
-  }
-
-  return self;
+  return [self initWithShortcutName:[coder decodeObjectForKey:@"name"]
+                    shortcutKeyCode:[coder decodeIntegerForKey:@"keyCode"]
+                  shortcutModifiers:[coder decodeIntegerForKey:@"modifiers"]];
 }
-
-#pragma clang diagnostic pop
-
-#pragma mark -
 
 - (void)encodeWithCoder:(NSCoder *)coder
 {
-  [coder encodeObject:self.shortcutName forKey:@"name"];
-  [coder encodeInteger:self.shortcutCode forKey:@"keyCode"];
-  [coder encodeInteger:self.shortcutModifiers forKey:@"modifiers"];
+  [coder encodeObject:_shortcutName forKey:@"name"];
+  [coder encodeInteger:_shortcutKeyCode forKey:@"keyCode"];
+  [coder encodeInteger:_shortcutModifiers forKey:@"modifiers"];
 }
 
-#pragma mark -
-
-- (id)replacementObjectForPortCoder:(NSPortCoder *)encoder
+- (NSString *)shortcutKeyBinding
 {
-  if (encoder.isBycopy) {
-    return self;
+  return SpectacleConvertShortcutToKeyBinding(self);
+}
+
+- (SpectacleWindowAction *)windowAction
+{
+  NSString *name = _shortcutName;
+  SpectacleWindowAction *windowAction = kSpectacleWindowActionNone;
+
+  if ([name isEqualToString:@"MoveToCenter"]) {
+    windowAction = kSpectacleWindowActionCenter;
+  } else if ([name isEqualToString:@"MoveToFullscreen"]) {
+    windowAction = kSpectacleWindowActionFullscreen;
+  } else if ([name isEqualToString:@"MoveToLeftHalf"]) {
+    windowAction = kSpectacleWindowActionLeftHalf;
+  } else if ([name isEqualToString:@"MoveToRightHalf"]) {
+    windowAction = kSpectacleWindowActionRightHalf;
+  } else if ([name isEqualToString:@"MoveToTopHalf"]) {
+    windowAction = kSpectacleWindowActionTopHalf;
+  } else if ([name isEqualToString:@"MoveToBottomHalf"]) {
+    windowAction = kSpectacleWindowActionBottomHalf;
+  } else if ([name isEqualToString:@"MoveToUpperLeft"]) {
+    windowAction = kSpectacleWindowActionUpperLeft;
+  } else if ([name isEqualToString:@"MoveToLowerLeft"]) {
+    windowAction = kSpectacleWindowActionLowerLeft;
+  } else if ([name isEqualToString:@"MoveToUpperRight"]) {
+    windowAction = kSpectacleWindowActionUpperRight;
+  } else if ([name isEqualToString:@"MoveToLowerRight"]) {
+    windowAction = kSpectacleWindowActionLowerRight;
+  } else if ([name isEqualToString:@"MoveToNextDisplay"]) {
+    windowAction = kSpectacleWindowActionNextDisplay;
+  } else if ([name isEqualToString:@"MoveToPreviousDisplay"]) {
+    windowAction = kSpectacleWindowActionPreviousDisplay;
+  } else if ([name isEqualToString:@"MoveToNextThird"]) {
+    windowAction = kSpectacleWindowActionNextThird;
+  } else if ([name isEqualToString:@"MoveToPreviousThird"]) {
+    windowAction = kSpectacleWindowActionPreviousThird;
+  } else if ([name isEqualToString:@"MakeLarger"]) {
+    windowAction = kSpectacleWindowActionLarger;
+  } else if ([name isEqualToString:@"MakeSmaller"]) {
+    windowAction = kSpectacleWindowActionSmaller;
+  } else if ([name isEqualToString:@"UndoLastMove"]) {
+    windowAction = kSpectacleWindowActionUndo;
+  } else if ([name isEqualToString:@"RedoLastMove"]) {
+    windowAction = kSpectacleWindowActionRedo;
   }
 
-  return [super replacementObjectForPortCoder:encoder];
+  return windowAction;
 }
-
-#pragma mark -
-
-+ (SpectacleShortcut *)clearedShortcut
-{
-  return [[SpectacleShortcut alloc] initWithShortcutCode:0 shortcutModifiers:0];
-}
-
-+ (SpectacleShortcut *)clearedShortcutWithName:(NSString *)name
-{
-  SpectacleShortcut *shortcut = [[SpectacleShortcut alloc] initWithShortcutCode:0 shortcutModifiers:0];
-
-  shortcut.shortcutName = name;
-
-  return shortcut;
-}
-
-#pragma mark -
 
 - (void)triggerShortcutAction
 {
-  if (self.shortcutAction) {
-    self.shortcutAction(self);
+  if (_shortcutAction) {
+    _shortcutAction(self);
   }
 }
 
-#pragma mark -
-
 - (BOOL)isClearedShortcut
 {
-  return (self.shortcutCode == 0) && (self.shortcutModifiers == 0);
+  return _shortcutKeyCode == -1 || (_shortcutKeyCode == 0 && _shortcutModifiers == 0);
 }
-
-#pragma mark -
 
 - (NSString *)displayString
 {
-  return [[SpectacleShortcutTranslator sharedTranslator] translateShortcut:self];
+  return SpectacleTranslateShortcut(self);
 }
-
-#pragma mark -
-
-+ (BOOL)validCocoaModifiers:(NSUInteger)modifiers
-{
-  return ((modifiers & NSAlternateKeyMask)
-          || (modifiers & NSCommandKeyMask)
-          || (modifiers & NSControlKeyMask)
-          || (modifiers & NSShiftKeyMask));
-}
-
-#pragma mark -
 
 - (BOOL)isEqual:(id)object
 {
   if (object == self) {
     return YES;
   }
-
   if (!object || ![object isKindOfClass:[self class]]) {
     return NO;
   }
-
   return [self isEqualToShortcut:object];
 }
 
@@ -120,16 +153,26 @@
   if (shortcut == self) {
     return YES;
   }
-
-  if (shortcut.shortcutCode != self.shortcutCode) {
+  if (shortcut.shortcutKeyCode != _shortcutKeyCode) {
     return NO;
   }
-
-  if (shortcut.shortcutModifiers != self.shortcutModifiers) {
+  if (shortcut.shortcutModifiers != _shortcutModifiers) {
     return NO;
   }
-
   return YES;
+}
+
+- (BOOL)containsModifiers:(NSUInteger)modifiers
+{
+  return _shortcutModifiers == SpectacleConvertModifiersToCarbonIfNecessary(modifiers);
+}
+
++ (BOOL)validCocoaModifiers:(NSUInteger)modifiers
+{
+  return ((modifiers & NSAlternateKeyMask)
+          || (modifiers & NSCommandKeyMask)
+          || (modifiers & NSControlKeyMask)
+          || (modifiers & NSShiftKeyMask));
 }
 
 @end
